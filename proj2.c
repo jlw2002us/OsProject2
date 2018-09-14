@@ -17,6 +17,7 @@
 //https://stackoverflow.com/questions/4217037/catch-ctrl-c-in-c
 //https://stackoverflow.com/questions/13273836/how-to-kill-child-of-fork?rq=1
 //https://stackoverflow.com/questions/1784136/simple-signals-c-programming-and-alarm-function
+//https://github.com/angrave/SystemProgramming/wiki/Forking,-Part-2:-Fork,-Exec,-Wait
 
 #define  NOT_READY  -1
 #define  FILLED     0
@@ -30,7 +31,13 @@ struct Memory {
   struct Memory  *ShmPTR;
   pid_t childID;
   int ShmID;
-  
+
+//zombie cleanup
+void cleanup(int signal) {
+  int status; printf("hi"); 
+  while (waitpid((pid_t) (-1), 0, WNOHANG) > 0) {}
+}  
+
 //catch control-c
 void  INThandler(int sig)
 {
@@ -42,7 +49,6 @@ void  INThandler(int sig)
         shmctl(ShmID, IPC_RMID, NULL);
         printf("Server has removed its shared memory...\n");
         printf("Server exits...\n");
-        kill(childID, SIGTERM);
         exit(0);
 }
 //catch alarm 
@@ -54,7 +60,6 @@ void  ALARMhandler(int sig)
         shmctl(ShmID, IPC_RMID, NULL);
         printf("Server has removed its shared memory...\n");
         printf("Server exits...\n");
-        kill(childID, SIGTERM);
         exit(0);
   signal(SIGALRM, ALARMhandler);     /* reinstall the handler    */
 }
@@ -62,9 +67,9 @@ void  ALARMhandler(int sig)
  int main(int argc, char* argv[])
   {
      signal(SIGALRM, ALARMhandler);
+     signal(SIGCHLD, cleanup);
      alarm(2); //program can only run 2 seconds;
      float finaltime;
-     double cpu_time_used;
      bool died = false;
      signal(SIGINT, INThandler);
      int i, status;
@@ -82,24 +87,24 @@ void  ALARMhandler(int sig)
           exit(1);
      }
       
-//    printf("Server has received a shared memory of two integers...\n");
+    printf("Server has received a shared memory of two integers...\n");
 
     ShmPTR = (struct Memory *) shmat(ShmID, NULL, 0);
     if ((int) ShmPTR == -1) {
       printf("*** shmat error (server) ***\n");
       exit(1);
     }
-  //  printf("Server has attached the shared memory...\n");
+    printf("Server has attached the shared memory...\n");
 
     ShmPTR->status  = NOT_READY;
     ShmPTR->seconds = 0;
     ShmPTR->milliseconds = 0;
 
-    //printf("Server(Master) has filled %d %d to shared memory...\n",
-      //      ShmPTR->seconds, ShmPTR->milliseconds);
+    printf("Server(Master) has filled %d %d to shared memory...\n",
+            ShmPTR->seconds, ShmPTR->milliseconds);
     ShmPTR->status = FILLED;
  
-     for(int i=0; i < 100; i++){ 
+     for(int i=0; i < 1000; i++){ 
        
        if(childQueue <= 3){    
      if ((childID = fork()) == -1) {     /* Start a child process.      */
@@ -115,37 +120,37 @@ void  ALARMhandler(int sig)
      }
      else {                              /* This is the parent.         */
          
-         while(true){
-         endID = waitpid(childID, &status, WNOHANG|WUNTRACED);
+         //while(true){
+         //endID = waitpid(childID, &status, WNOHANG|WUNTRACED);
          
-         while (ShmPTR->status != TAKEN)
+         
+           while (ShmPTR->status != TAKEN)
            ;
-         //printf("Server is reading from child.. %d seconds, %d milliseconds\n", ShmPTR->seconds, ShmPTR->milliseconds);
-         if (endID == -1) {            /* error calling waitpid       */
-              perror("waitpid error");
-              exit(EXIT_FAILURE);
-           }
+         printf("Server is reading from child.. %d seconds, %d milliseconds\n", ShmPTR->seconds, ShmPTR->milliseconds);
+         //if (endID == -1) {            /* error calling waitpid       */
+           //   perror("waitpid error");
+             // exit(EXIT_FAILURE);
+           //}
          
-          else if (endID == childID) {  /* child ended                 */
-            //printf("Server has detected the completion of its child...\n");
+          //else if (endID == childID) {  /* child ended                 */
+            printf("Server has detected the completion of its child...\n");
                 ShmPTR->status = FILLED;
                 childQueue--;    
-               if (WIFEXITED(status)){
-                  printf("Child ended normally.\n");
-                }
-              else if (WIFSIGNALED(status))
-                 printf("Child ended because of an uncaught signal.n");
-              else if (WIFSTOPPED(status))
-                 printf("Child process has stopped.n");
+         //      if (WIFEXITED(status)){
+           //       printf("Child ended normally.\n");
+             //   }
+             // else if (WIFSIGNALED(status))
+               //  printf("Child ended because of an uncaught signal.n");
+              //else if (WIFSTOPPED(status))
+                // printf("Child process has stopped.n");
               
-              died = true; break;
-           }
-          }
+              //died = true; break;
+          // }
+          //}
         }
        }
        else{ i = i - 1;} //wait for child to finish
       }
-      if(died == false) kill(childID, SIGTERM);
       
      end = clock();
      clock_t finalTime = end - start;
