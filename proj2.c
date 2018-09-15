@@ -38,7 +38,7 @@ struct Memory {
 void cleanup(int signal) {
  
   while (waitpid((pid_t) (-1), 0, WNOHANG) > 0) {}
-  ShmPTR->childQueue--; 
+  ShmPTR->childQueue--;  
 }  
 
 //catch control-c
@@ -47,13 +47,14 @@ void  INThandler(int sig)
       
     signal(sig, SIG_IGN);  
     write(STDOUT_FILENO,"  Control-C hit ...\n\n",16);
-    printf("Server is reading from child.. %llu seconds, %llu milliseconds\n %d child processes\n", ShmPTR->seconds, ShmPTR->milliseconds,ShmPTR->childQueue);   
-    shmdt((void *) ShmPTR);
-     printf("\nServer has detached its shared memory...\n");
-    shmctl(ShmID, IPC_RMID, NULL);
-    printf("Server has removed its shared memory...\n");
-    printf("Server exits...\n");
-    exit(0);
+//    printf("Server is reading from child.. %llu seconds, %llu milliseconds\n %d child processes\n", ShmPTR->seconds, ShmPTR->milliseconds,ShmPTR->childQueue);   
+  //  shmdt((void *) ShmPTR);
+    // printf("\nServer has detached its shared memory...\n");
+    //shmctl(ShmID, IPC_RMID, NULL);
+    //printf("Server has removed its shared memory...\n");
+    //printf("Server exits...\n");
+    //exit(0);
+    signal_interrupt = true; alarm(0);
 }
 
 //catch alarm 
@@ -61,15 +62,15 @@ void  ALARMhandler(int sig)
 { if(signal_interrupt == false)
   write (STDOUT_FILENO,"Alarm went off\n",16);
         signal(SIGALRM, SIG_IGN);
-        printf("Server is reading from child.. %llu seconds, %llu milliseconds\n %d child processes\n", ShmPTR->seconds, ShmPTR->milliseconds,ShmPTR->childQueue);              
-        shmdt((void *) ShmPTR);
-        printf("\nServer has detached its shared memory...\n");
-        shmctl(ShmID, IPC_RMID, NULL);
-        printf("Server has removed its shared memory...\n");
-        printf("Server exits...\n");
-        exit(0);
+//        printf("Server is reading from child.. %llu seconds, %llu milliseconds\n %d child processes\n", ShmPTR->seconds, ShmPTR->milliseconds,ShmPTR->childQueue);              
+  //      shmdt((void *) ShmPTR);
+    //    printf("\nServer has detached its shared memory...\n");
+      //  shmctl(ShmID, IPC_RMID, NULL);
+        //printf("Server has removed its shared memory...\n");
+        //printf("Server exits...\n");
+        //exit(0);
   signal(SIGALRM, ALARMhandler);
-       
+       signal_interrupt = true;
 }
 
  int main(int argc, char* argv[])
@@ -109,9 +110,9 @@ void  ALARMhandler(int sig)
     printf("Server(Master) has filled %llu %llu %d to shared memory...\n",
             ShmPTR->seconds, ShmPTR->milliseconds, ShmPTR->childQueue);
     ShmPTR->status = FILLED;
-
-    for(i = 0; i < 10000; i++){       
-     if (ShmPTR->childQueue  < 1){ 
+    while(signal_interrupt == false){
+    for(i = 0; i < 100; i++){if(signal_interrupt == true) break;
+     if (ShmPTR->childQueue  < 50){ 
          
          ShmPTR->childQueue++;                
          if ((childID = fork()) == -1) {     /* Start a child process.      */
@@ -120,7 +121,7 @@ void  ALARMhandler(int sig)
         }
      
        else if (childID == 0) {             /* This is the child.          */
-             
+        signal(SIGINT, SIG_IGN);     
         execvp(argv[1], &argv[1]);
         perror("child failed to execvp the command");
         return 1;
@@ -140,16 +141,16 @@ void  ALARMhandler(int sig)
     }       
            
       
-     
+     if (signal_interrupt == true) break;
      end = clock();
      clock_t finalTime = end - start;
-     printf("Server is reading from child.. %llu seconds, %llu milliseconds\n %d child processes\n", ShmPTR->seconds, ShmPTR->milliseconds,ShmPTR->childQueue);
+     //printf("Server is reading from child.. %llu seconds, %llu milliseconds\n %d child processes\n", ShmPTR->seconds, ShmPTR->milliseconds,ShmPTR->childQueue);
      
-       do{ 
+       do{ if(signal_interrupt == true) break; 
        printf("Clock ticking..\n");
        sleep(1);
      finaltime = (float)finalTime/CLOCKS_PER_SEC;
-     }while (finaltime < 2);
+     }while (finaltime < 2);}
      printf("Server is reading from child.. %llu seconds, %llu milliseconds\n %d child processes\n", ShmPTR->seconds, ShmPTR->milliseconds,ShmPTR->childQueue);
      shmdt((void *) ShmPTR);
      printf("Server has detached its shared memory...\n");

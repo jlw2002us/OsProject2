@@ -50,7 +50,7 @@ int  main(int argc, char* argv[])
     ShmPTR->status = TAKEN;
     //ShmPTR->seconds = ShmPTR->seconds + 1;
     ShmPTR->milliseconds = ShmPTR->milliseconds +(n * 1000);
-    printf("%llu", ShmPTR->milliseconds);    
+//    printf("%llu", ShmPTR->milliseconds);    
     while(ShmPTR->milliseconds > 999)
     {
        ShmPTR->seconds = ShmPTR->seconds + 1;
