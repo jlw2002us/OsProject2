@@ -21,7 +21,7 @@ int  main(int argc, char* argv[])
     
     //convert arg passed from parent to int      
     int n = atoi(argv[1]);
-       
+//    printf("%d", n);       
     key_t          ShmKEY;
     int            ShmID;
     struct Memory  *ShmPTR;
@@ -49,7 +49,7 @@ int  main(int argc, char* argv[])
 
     ShmPTR->status = TAKEN;
     //ShmPTR->seconds = ShmPTR->seconds + 1;
-    ShmPTR->milliseconds = ShmPTR->milliseconds +(n * 1000);
+    ShmPTR->milliseconds = ShmPTR->milliseconds +(n * 1000000);
 //    printf("%llu", ShmPTR->milliseconds);    
     while(ShmPTR->milliseconds > 999)
     {
