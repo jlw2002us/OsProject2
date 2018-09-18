@@ -1,6 +1,7 @@
  //Jennifer Wasson
  //Operating Systems
  //Project 2
+
   #include <string.h>
   #include <ctype.h> 
   #include  <sys/shm.h>
@@ -16,7 +17,6 @@
  
 //Sources used:  https://support.sas.com/documentation/onlinedoc/sasc/doc/lr2/waitpid.htm
 //https://stackoverflow.com/questions/4217037/catch-ctrl-c-in-c
-//https://stackoverflow.com/questions/13273836/how-to-kill-child-of-fork?rq=1
 //https://stackoverflow.com/questions/1784136/simple-signals-c-programming-and-alarm-function
 //https://github.com/angrave/SystemProgramming/wiki/Forking,-Part-2:-Fork,-Exec,-Wait
 
@@ -26,8 +26,8 @@
 
 struct Memory {
      int  status;
-     unsigned long long int  seconds;
-     unsigned long long int  milliseconds;
+     long long int  seconds;
+     long long int  milliseconds;
      int  childQueue;
 };
   struct Memory  *ShmPTR;
@@ -43,9 +43,9 @@ void helpoptions()
 
 //zombie cleanup
 void cleanup(int signal) {
- 
+//  printf("%d\n", ShmPTR->childQueue);
   while (waitpid((pid_t) (-1), 0, WNOHANG) > 0) {}
-  ShmPTR->childQueue--;  
+  ShmPTR->childQueue--;   
 }  
 
 //catch control-c
@@ -63,8 +63,9 @@ void  ALARMhandler(int sig)
 { if(signal_interrupt == false)
   write (STDOUT_FILENO,"Alarm went off\n",16);
         signal(SIGALRM, SIG_IGN);
+   signal_interrupt = true;
   signal(SIGALRM, ALARMhandler);
-       signal_interrupt = true;
+       
 }
 
  int main(int argc, char* argv[])
@@ -175,7 +176,7 @@ void  ALARMhandler(int sig)
        return 1;
      }
 
-
+     //Make shared memory
      ShmKEY = ftok(".", 'x');
      ShmID = shmget(ShmKEY, sizeof(struct Memory), IPC_CREAT | 0666);
      if (ShmID < 0) {
@@ -198,33 +199,36 @@ void  ALARMhandler(int sig)
     printf("Server(Master) has filled %llu %llu seconds milliseconds  to shared memory...\n",
             ShmPTR->seconds, ShmPTR->milliseconds);
     ShmPTR->status = FILLED;
+    
+    //have children increment to master clock
     while(signal_interrupt == false){
     for(i = 0; i < n; i++){if(signal_interrupt == true) break;
      if (ShmPTR->childQueue  < s){ 
-         
-         ShmPTR->childQueue++;                
+         signal(SIGCHLD, SIG_IGN);         
+         ShmPTR->childQueue++;                 
          if ((childID = fork()) == -1) {     
            perror("fork error");
            exit(EXIT_FAILURE);
         }
      
-       else if (childID == 0) {             
-        signal(SIGINT, SIG_IGN);
-        execvp("./child", &argv[z]);     
+         else if (childID == 0) {   //this is child
+           signal(SIGINT, SIG_IGN);
+           execvp("./child", &argv[z]);     
         
         perror("child failed to execvp the command");
         return 1;
        }
-       else {                              
+       else {       //this is parent
           	     
                      
            while (ShmPTR->status != TAKEN)
            ;
          
-                ShmPTR->status = FILLED;
+           ShmPTR->status = FILLED;
              
         }}
-        else{ i = i - 1; } 
+        else{  signal(SIGCHLD, cleanup);
+               i = i - 1; }//wait for a child to finish 
        
     }       
            
@@ -237,7 +241,8 @@ void  ALARMhandler(int sig)
         }while (true);
      signal_interrupt = true;}
     
-     printf("\nServer is reading from child.. %llu seconds, %llu milliseconds\n", ShmPTR->seconds, ShmPTR->milliseconds);
+     //print final results and free shared memory
+     printf("\nServer is reading from child.. %lld seconds, %lld milliseconds\n", ShmPTR->seconds, ShmPTR->milliseconds);
      shmdt((void *) ShmPTR);
      printf("Server has detached its shared memory...\n");
      shmctl(ShmID, IPC_RMID, NULL);

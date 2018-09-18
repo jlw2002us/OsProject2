@@ -3,7 +3,7 @@
 #include  <sys/types.h>
 #include  <sys/ipc.h>
 #include  <sys/shm.h>
-
+#include <stdint.h>
 
 #define  NOT_READY  -1
 #define  FILLED     0
@@ -11,8 +11,10 @@
 
 struct Memory {
      int  status;
-     unsigned long long int  seconds;
-     unsigned long long int milliseconds;
+//     unsigned long long int  seconds;
+  //   unsigned long long int milliseconds;
+       long long  seconds;
+      long long int milliseconds;
      int childQueue;
 };
 
@@ -21,7 +23,7 @@ int  main(int argc, char* argv[])
     
     //convert arg passed from parent to int      
     int n = atoi(argv[1]);
-       
+     uint64_t integer;
     key_t          ShmKEY;
     int            ShmID;
     struct Memory  *ShmPTR;
@@ -45,13 +47,19 @@ int  main(int argc, char* argv[])
 
     ShmPTR->status = TAKEN;
     
-    ShmPTR->milliseconds = ShmPTR->milliseconds +(n * 1000000);    
-    while(ShmPTR->milliseconds > 999)
+    //increment clock    
+    //ShmPTR->milliseconds = ShmPTR->milliseconds +(n * 1000000);
+    for (int x = 0; x < n * 100000; x++)
     {
+      ShmPTR->milliseconds = ShmPTR->milliseconds + 1;    
+      if(ShmPTR->milliseconds > 999)
+      {
        ShmPTR->seconds = ShmPTR->seconds + 1;
        ShmPTR->milliseconds = ShmPTR->milliseconds - 1000;
-    }
+       }
+     }
     
+   //printf("Incremented %llu  seconds\n", ShmPTR->seconds);    
     shmdt((void *) ShmPTR);
     
     exit(0);
