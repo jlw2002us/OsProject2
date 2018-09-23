@@ -10,11 +10,9 @@
 #define  TAKEN      1
 
 struct Memory {
-     int  status;
-//     unsigned long long int  seconds;
-  //   unsigned long long int milliseconds;
-       long long  seconds;
-      long long int milliseconds;
+     int  status;      
+     long long  int seconds;
+     long long int milliseconds;
      int childQueue;
 };
 
@@ -23,7 +21,7 @@ int  main(int argc, char* argv[])
     
     //convert arg passed from parent to int      
     int n = atoi(argv[1]);
-     uint64_t integer;
+     //uint64_t integer;
     key_t          ShmKEY;
     int            ShmID;
     struct Memory  *ShmPTR;
@@ -34,8 +32,7 @@ int  main(int argc, char* argv[])
           printf("*** shmget error (client) ***\n");
           exit(1);
     }
-    //printf("   Client has received a shared memory of two integers...\n");
-
+    
     ShmPTR = (struct Memory *) shmat(ShmID, NULL, 0);
     if ((int) ShmPTR == -1) {
           printf("*** shmat error (client) ***\n");
@@ -46,10 +43,10 @@ int  main(int argc, char* argv[])
           ;
 
     ShmPTR->status = TAKEN;
-    
+    printf("Child incremented %d milliseconds\n", n*1000000);    
     //increment clock    
-    //ShmPTR->milliseconds = ShmPTR->milliseconds +(n * 1000000);
-    for (int x = 0; x < n * 100000; x++)
+    
+    for (int x = 0; x < n * 1000000; x++)
     {
       ShmPTR->milliseconds = ShmPTR->milliseconds + 1;    
       if(ShmPTR->milliseconds > 999)
@@ -59,7 +56,7 @@ int  main(int argc, char* argv[])
        }
      }
     
-   //printf("Incremented %llu  seconds\n", ShmPTR->seconds);    
+        
     shmdt((void *) ShmPTR);
     
     exit(0);

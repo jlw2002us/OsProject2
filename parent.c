@@ -1,3 +1,4 @@
+
  //Jennifer Wasson
  //Operating Systems
  //Project 2
@@ -73,7 +74,7 @@ void  ALARMhandler(int sig)
      
      signal(SIGALRM, ALARMhandler);
      signal(SIGCHLD, cleanup);
-      pid_t childID;
+     pid_t childID;
      int ShmID;
      alarm(2); //program can only run 2 seconds;
      signal(SIGINT, INThandler);
@@ -240,13 +241,13 @@ void  ALARMhandler(int sig)
        sleep(1);
         }while (true);
      signal_interrupt = true;}
-    
+     signal(SIGCHLD, cleanup);    
      //print final results and free shared memory
      printf("\nServer is reading from child.. %lld seconds, %lld milliseconds\n", ShmPTR->seconds, ShmPTR->milliseconds);
      shmdt((void *) ShmPTR);
      printf("Server has detached its shared memory...\n");
      shmctl(ShmID, IPC_RMID, NULL);
      printf("Server has removed its shared memory...\n");
-     printf("Server exits...\n");
+     killpg(getpgid(getpid()), SIGTERM);
      exit(EXIT_SUCCESS);
   }
